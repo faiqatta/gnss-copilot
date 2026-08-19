@@ -2,6 +2,7 @@ streamlit
 openai
 python-dotenv
 qdrant-client
+fastembed
 llama-index
 llama-index-vector-stores-qdrant
 llama-index-embeddings-huggingface
