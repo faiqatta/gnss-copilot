@@ -198,7 +198,7 @@ except Exception as e:
 
 # --- DOMAIN ROUTER / CLASSIFIER ---
 async def check_gnss_relevance(user_query: str) -> bool:
-    gnss_keywords = [=
+    gnss_keywords = [
         "gnss", "gps", "rtk", "ppp", "satellit", "ephemeris", 
         "ublox", "septentrio", "positioning", "ionospher", "tropospher", 
         "carrier-phase", "multipath", "ambiguity", "receiver", "geodesy"
