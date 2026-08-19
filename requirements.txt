@@ -1,5 +1,11 @@
-llama-index
-llama-index-vector-stores-chroma
 streamlit
+openai
 python-dotenv
+qdrant-client
+llama-index
+llama-index-vector-stores-qdrant
+llama-index-embeddings-huggingface
+llama-index-embeddings-ollama
+llama-index-llms-openrouter
+llama-index-llms-groq
 pypdf
