@@ -153,10 +153,15 @@ st.markdown("""
 
 load_dotenv()
 
-# --- ENVIRONMENT & API KEYS ---
-QDRANT_URL = os.getenv("QDRANT_URL") or st.secrets.get("QDRANT_URL")
-QDRANT_API_KEY = os.getenv("QDRANT_API_KEY") or st.secrets.get("QDRANT_API_KEY")
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY") or st.secrets.get("OPENROUTER_API_KEY")
+def get_secret(key):
+    try:
+        return st.secrets[key]
+    except Exception:
+        return os.getenv(key)
+
+QDRANT_URL = get_secret("QDRANT_URL")
+QDRANT_API_KEY = get_secret("QDRANT_API_KEY")
+OPENROUTER_API_KEY = get_secret("OPENROUTER_API_KEY")
 
 if not OPENROUTER_API_KEY:
     st.error("⚠️ `OPENROUTER_API_KEY` is missing in environment variables or `.env` file.")
@@ -174,7 +179,13 @@ ai_client = AsyncOpenAI(
 ## --- VECTOR DATABASE INITIALIZATION ---
 @st.cache_resource
 def init_vector_db():
-    client = qdrant_client.QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
+    url = get_secret("QDRANT_URL")
+    key = get_secret("QDRANT_API_KEY")
+    
+    if not url or not key:
+        raise ValueError(f"Qdrant credentials missing on Streamlit Cloud! URL present: {bool(url)}, Key present: {bool(key)}")
+        
+    client = qdrant_client.QdrantClient(url=url, api_key=key)
     vector_store = QdrantVectorStore(client=client, collection_name="gnss_dataset")
     embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-en-v1.5")
     return VectorStoreIndex.from_vector_store(vector_store=vector_store, embed_model=embed_model)
