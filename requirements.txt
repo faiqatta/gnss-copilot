@@ -1,8 +1,8 @@
 streamlit
 python-dotenv
 fastembed
-qdrant-client==1.9.0
-llama-index
+qdrant-client>=1.10.0
+llama-index-core
 llama-index-vector-stores-qdrant
 llama-index-embeddings-huggingface
 llama-index-llms-openrouter
