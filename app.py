@@ -154,9 +154,9 @@ st.markdown("""
 load_dotenv()
 
 # --- ENVIRONMENT & API KEYS ---
-QDRANT_URL = os.getenv("QDRANT_URL")
-QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+QDRANT_URL = os.getenv("QDRANT_URL") or st.secrets.get("QDRANT_URL")
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY") or st.secrets.get("QDRANT_API_KEY")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY") or st.secrets.get("OPENROUTER_API_KEY")
 
 if not OPENROUTER_API_KEY:
     st.error("⚠️ `OPENROUTER_API_KEY` is missing in environment variables or `.env` file.")
@@ -174,7 +174,7 @@ ai_client = AsyncOpenAI(
 ## --- VECTOR DATABASE INITIALIZATION ---
 @st.cache_resource
 def init_vector_db():
-    client = qdrant_client.QdrantClient(path="./qdrant_db")
+    client = qdrant_client.QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
     vector_store = QdrantVectorStore(client=client, collection_name="gnss_dataset")
     embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-en-v1.5")
     return VectorStoreIndex.from_vector_store(vector_store=vector_store, embed_model=embed_model)
@@ -187,7 +187,7 @@ except Exception as e:
 
 # --- DOMAIN ROUTER / CLASSIFIER ---
 async def check_gnss_relevance(user_query: str) -> bool:
-    gnss_keywords = [
+    gnss_keywords = [=
         "gnss", "gps", "rtk", "ppp", "satellit", "ephemeris", 
         "ublox", "septentrio", "positioning", "ionospher", "tropospher", 
         "carrier-phase", "multipath", "ambiguity", "receiver", "geodesy"
