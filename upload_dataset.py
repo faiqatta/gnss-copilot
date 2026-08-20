@@ -7,24 +7,41 @@ from dotenv import load_dotenv
 from llama_index.core import SimpleDirectoryReader
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 
-# 0. CPU Multi-Threading
+# 0. CPU Multi-Threading Setup
 num_cores = os.cpu_count() or 4
 torch.set_num_threads(num_cores)
 torch.set_num_interop_threads(num_cores)
 
-# 1. Connect Local Qdrant
-qdrant_path = "./qdrant_db"
-print(f"📁 Initializing local Qdrant database at '{qdrant_path}'...")
-client = qdrant_client.QdrantClient(path=qdrant_path)
+# 1. Connect to Qdrant Cloud
+load_dotenv(override=True)
+
+url = os.getenv("QDRANT_URL")
+api_key = os.getenv("QDRANT_API_KEY")
+
+print(f"🔑 Loaded Key Ending: ...{api_key[-10:]}" if api_key else "❌ ERROR: QDRANT_API_KEY NOT FOUND")
+print(f"☁️ Connecting to Qdrant Cloud at '{url}'...")
+
+# Initialize Client explicitly
+client = qdrant_client.QdrantClient(
+    url=url,
+    api_key=api_key,
+    timeout=60
+)
+
 collection_name = "gnss_dataset"
 
-if client.collection_exists(collection_name=collection_name):
+# Safe collection recreation without triggering 404 on collection_exists()
+try:
     client.delete_collection(collection_name=collection_name)
+    print(f"🗑️ Deleted existing collection: {collection_name}")
+except Exception:
+    pass
 
 client.create_collection(
     collection_name=collection_name,
     vectors_config=VectorParams(size=384, distance=Distance.COSINE)
 )
+print(f"✅ Created fresh collection: {collection_name}")
 
 # 2. Load Model
 print("🧠 Loading BAAI/bge-small-en-v1.5 Model...")
@@ -61,17 +78,26 @@ print(f"🧩 Processing EXACTLY {len(chunks)} total text chunks...")
 # 5. Embed & Upsert
 embeddings = embed_model.get_text_embedding_batch(chunks, show_progress=True)
 
-points = [
-    PointStruct(
-        id=idx,
-        vector=vector,
-        payload={"text": chunk, "file_name": fname}
+# Correctly build points list
+points = []
+for idx, (chunk, vector, fname) in enumerate(zip(chunks, embeddings, metadatas), start=1):
+    points.append(
+        PointStruct(
+            id=idx,
+            vector=vector,
+            payload={
+                "text": chunk,
+                "file_name": fname
+            }
+        )
     )
-    for idx, (chunk, vector, fname) in enumerate(zip(chunks, embeddings, metadatas), start=1)
-]
 
+print("💾 Uploading vectors to Qdrant Cloud in batches...")
 
-print("💾 Saving vectors to local disk (`./qdrant_db`)...")
-client.upsert(collection_name=collection_name, points=points)
+# Batch upsert to prevent request size failures
+batch_size = 100
+for i in range(0, len(points), batch_size):
+    batch = points[i:i + batch_size]
+    client.upsert(collection_name=collection_name, points=batch)
 
-print("\n✅ All 49 PDFs successfully indexed to local `./qdrant_db`!")
+print("\n✅ All PDFs successfully indexed to Qdrant Cloud!")
